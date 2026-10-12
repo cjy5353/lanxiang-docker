@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.env
+.env.*
+backups
+*.dump
+*.zip
+tests
+scripts
+README.md

@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import {mkdtemp,writeFile,mkdir,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {database} from './support.mjs';
+import {createServer} from '../server/http.mjs';
+const db=await database();
+await db.exec('set role lx_app;');
+const dir=await mkdtemp(join(tmpdir(),'lanxiang-http-'));
+await mkdir(join(dir,'admin'));await writeFile(join(dir,'index.html'),'<h1>Quiz</h1>');await writeFile(join(dir,'admin/index.html'),'<h1>Admin</h1>');
+const env={ADMIN_SECRET:'test-admin-password-24-characters',SESSION_SIGNING_KEY:'test-session-signing-key-32-characters',CLIENT_ORIGINS:'http://localhost:8080'};
+const server=createServer({pg:db,env,staticDir:dir});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+const base='http://127.0.0.1:'+server.address().port;
+try{
+ assert.equal((await fetch(base+'/healthz')).status,200);
+ assert.match(await (await fetch(base+'/')).text(),/Quiz/);
+ assert.match(await (await fetch(base+'/admin/')).text(),/Admin/);
+ assert.equal((await fetch(base+'/admin',{redirect:'manual'})).status,308);
+ assert.equal((await fetch(base+'/.env')).status,404);
+ assert.equal((await fetch(base+'/server/index.mjs')).status,404);
+ assert.equal((await fetch(base+'/api/assessment-api/me')).status,200);
+ const call=async(path,body,token)=>fetch(base+'/api/assessment-api/'+path,{method:'POST',headers:{'Content-Type':'application/json',...(token?{'X-App-Token':token}:{})},body:JSON.stringify(body)});
+ const admin=await (await call('admin/login',{password:env.ADMIN_SECRET})).json();assert(admin.adminToken);
+ const codes=await (await call('admin/generate',{count:1},admin.adminToken)).json();assert.equal(codes.codes.length,1);
+ const access=await (await call('unlock',{code:codes.codes[0]})).json();assert.equal(access.remaining,3);
+ const first=await (await call('start',{nonce:crypto.randomUUID()},access.accessToken)).json();assert(first.sessionId);
+ const submit=await fetch(base+'/api/assessment-api/submit',{method:'POST',headers:{'Content-Type':'application/json','X-Test-Session':first.sessionId},body:JSON.stringify({answers:Array(16).fill(0)})});assert.equal(submit.status,200);const result=await submit.json();
+ assert.equal((await (await fetch(base+'/api/assessment-api/result/'+result.id)).json()).id,result.id);
+ assert.equal((await fetch(base+'/api/assessment-api/me',{headers:{Origin:'https://evil.example'}})).status,403);
+ assert.equal((await fetch(base+'/api/assessment-api/unlock',{method:'POST',body:'x'.repeat(12001)})).status,413);
+ console.log('PASS: native HTTP server, static/admin routes, secrets hidden, login/generate/unlock/start/submit/share, origin rejection and body limit.');
+}finally{server.closeAllConnections();await new Promise(r=>server.close(r));await db.close();await rm(dir,{recursive:true,force:true});}

@@ -1,0 +1,46 @@
+name: lanxiang
+services:
+  app:
+    build: .
+    image: lanxiang-app:1.0.0
+    restart: unless-stopped
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-8080}:3000"
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: lanxiang
+      PGUSER: lx_app
+      PGPASSWORD: ${APP_DB_PASSWORD:-}
+      ADMIN_SECRET: ${ADMIN_SECRET:-}
+      SESSION_SIGNING_KEY: ${SESSION_SIGNING_KEY:-}
+      PUBLIC_ORIGINS: ${PUBLIC_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lanxiang_owner
+      POSTGRES_DB: lanxiang
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lanxiang_owner -d lanxiang"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  db_data:

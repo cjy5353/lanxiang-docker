@@ -1,0 +1,29 @@
+{
+  "name": "lanxiang-docker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && tsc --noEmit -p tsconfig.server.json && vite build",
+    "test": "node tests/assessment.mjs && node tests/backend.mjs && node tests/database.mjs && node tests/supabase.mjs && node tests/edge-data.mjs && node tests/http.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "start": "node server/index.mjs",
+    "test:pages": "node tests/assessment.mjs && node tests/backend.mjs && node tests/database.mjs && node tests/supabase.mjs && node tests/edge-data.mjs",
+    "sync": "node scripts/build-edgefn.mjs && node scripts/build-quiz-data.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "1.31.0",
+    "pg": "8.16.3",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "typescript": "5.9.3",
+    "vite": "8.0.13"
+  }
+}
