@@ -23,7 +23,7 @@ for(const role of ['anon','authenticated']){
 }
 
 await pg.exec('set role service_role;');
-const env={ADMIN_SECRET:'test-admin-password-24-characters',SESSION_SIGNING_KEY:'test-session-signing-key-32-characters',CLIENT_ORIGINS:'https://cjy5605205.github.io'};
+const env={ADMIN_SECRET:'test-admin-password-24-characters',SESSION_SIGNING_KEY:'test-session-signing-key-32-characters',CLIENT_ORIGINS:'https://example.github.io'};
 const handle=createHandler({env:k=>env[k],fetch:postgrest(pg)});
 const origin=env.CLIENT_ORIGINS;
 async function call(path,body,token='',sid=''){

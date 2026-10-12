@@ -16,7 +16,6 @@ import type {QuizData} from './assessment.ts';
 const SUPABASE_URL = (Deno.env.get('SUPABASE_URL') ?? '').replace(/\/+$/, '');
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
 const CONFIG_KEYS = ['ADMIN_SECRET', 'SESSION_SIGNING_KEY', 'CLIENT_ORIGINS', 'QUIZ_DATA_URL'];
-const DEFAULT_QUIZ_URL = 'https://cjy5605205.github.io/lanxiang-docker/quiz-data.json';
 const BODY_LIMIT = 12000;
 const CONFIG_TTL = 60000;
 const QUIZ_TTL = 600000;
@@ -53,11 +52,20 @@ async function settings(): Promise<Record<string, string>> {
 let cachedQuiz: {at: number; value: QuizData} | null = null;
 let loading: Promise<QuizData> | null = null;
 
+// 题库地址：优先用配置里的 QUIZ_DATA_URL，否则按第一个允许来源拼出 Pages 上的 quiz-data.json。
+function quizUrl(values: Record<string, string>): string {
+  if (values.QUIZ_DATA_URL) return values.QUIZ_DATA_URL;
+  const origin = (values.CLIENT_ORIGINS || '').split(',')[0].trim().replace(/\/+$/, '');
+  return origin ? origin + '/lanxiang-docker/quiz-data.json' : '';
+}
+
 // 题库先取 GitHub Pages 上的 quiz-data.json（改了题库提交后自动生效），
 // 同时把副本写回数据库；取不到时用数据库里的副本兜底。
 async function loadQuiz(): Promise<QuizData> {
-  const url = (await settings()).QUIZ_DATA_URL || DEFAULT_QUIZ_URL;
+  const url = quizUrl(await settings());
+  if (!url) console.error('未配置题库地址，改用数据库缓存');
   try {
+    if (!url) throw new Error('题库地址为空');
     const response = await fetch(url, {cache: 'no-store', signal: AbortSignal.timeout(10000)});
     if (!response.ok) throw new Error('题库下载失败（' + response.status + '）');
     const text = await response.text();
