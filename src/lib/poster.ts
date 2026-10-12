@@ -15,7 +15,7 @@ export async function makePoster(result:Result):Promise<Blob>{
  for(let i=0;i<dimensions.length;i++){const d=dimensions[i];text(d.name+'  '+result.scores[i]+'/100',23,c.color);ctx.fillStyle='#dee3d4';ctx.fillRect(left,y-12,width,9);ctx.fillStyle=c.color;ctx.fillRect(left,y-12,width*result.scores[i]/100,9);y+=24;ctx.font=font(17);ctx.fillStyle='#818771';ctx.fillText(d.low,left,y);ctx.fillText(d.high,W-left-ctx.measureText(d.high).width,y);y+=42;}
  section('04  从你的选择看见你','以下两项回答与主匹配原型较为接近，是本次结果的部分依据。');for(const e of result.evidence){text(e.title,23,c.color);text('你的选择：'+e.choice,22);y+=14;}
  section('05  你也有另一面',`${second.name} · ${second.type}\n${second.intro}`);text(result.difference,23);
- section('06  给现实生活的一点启发',c.advice);y+=30;text('生成日期：'+new Date(result.created).toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai'}),18,'#858b78');text('非官方粉丝创作 · 娱乐性测评，不作为心理诊断。\n人物标签与签语为本站原创，匹配部分处世倾向，不代表人物的全部行为。',17,'#858b78');
+ section('06  给现实生活的一点启发',c.advice);y+=30;text('生成日期：'+new Date(result.created).toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai'}),18,'#858b78');text('娱乐性测评，不作为心理诊断。\n人物标签与签语为本站原创，匹配部分处世倾向，不代表人物的全部行为。',17,'#858b78');
  y+=24;ctx.strokeStyle='#b7c2a8';ctx.strokeRect(24,24,W-48,y-4);
  const output=document.createElement('canvas');output.width=canvas.width;output.height=Math.ceil((y+44)*scale);output.getContext('2d')!.drawImage(canvas,0,0);
  return new Promise((resolve,reject)=>output.toBlob(b=>b?resolve(b):reject(new Error('图片生成失败，请重试。')),'image/png'));
