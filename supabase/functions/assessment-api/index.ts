@@ -53,32 +53,33 @@ async function settings(): Promise<Record<string, string>> {
 let cachedQuiz: {at: number; value: QuizData} | null = null;
 let loading: Promise<QuizData> | null = null;
 
-// 题库优先用数据库缓存，没有时从 GitHub Pages 上的 quiz-data.json 拉取并回写数据库，
-// 之后冷启动就不再依赖外部网络。
+// 题库先取 GitHub Pages 上的 quiz-data.json（改了题库提交后自动生效），
+// 同时把副本写回数据库；取不到时用数据库里的副本兜底。
 async function loadQuiz(): Promise<QuizData> {
-  try {
-    const cached = await rows('/lx_config?select=value&key=eq.QUIZ_DATA');
-    if (cached[0]?.value) return JSON.parse(String(cached[0].value)) as QuizData;
-  } catch (error) {
-    console.error('题库缓存读取失败', error instanceof Error ? error.message : 'unknown');
-  }
   const url = (await settings()).QUIZ_DATA_URL || DEFAULT_QUIZ_URL;
-  const response = await fetch(url, {cache: 'no-store', signal: AbortSignal.timeout(10000)});
-  if (!response.ok) throw new Error('题库下载失败（' + response.status + '）');
-  const text = await response.text();
-  const parsed = JSON.parse(text) as QuizData;
   try {
-    const saved = await fetch(SUPABASE_URL + '/rest/v1/lx_config?on_conflict=key', {
-      method: 'POST',
-      headers: {...dbHeaders('resolution=merge-duplicates,return=minimal')},
-      body: JSON.stringify([{key: 'QUIZ_DATA', value: text}]),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!saved.ok) console.error('题库缓存写入失败（' + saved.status + '）');
+    const response = await fetch(url, {cache: 'no-store', signal: AbortSignal.timeout(10000)});
+    if (!response.ok) throw new Error('题库下载失败（' + response.status + '）');
+    const text = await response.text();
+    const parsed = JSON.parse(text) as QuizData;
+    try {
+      const saved = await fetch(SUPABASE_URL + '/rest/v1/lx_config?on_conflict=key', {
+        method: 'POST',
+        headers: {...dbHeaders('resolution=merge-duplicates,return=minimal')},
+        body: JSON.stringify([{key: 'QUIZ_DATA', value: text}]),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!saved.ok) console.error('题库缓存写入失败（' + saved.status + '）');
+    } catch (error) {
+      console.error('题库缓存写入失败', error instanceof Error ? error.message : 'unknown');
+    }
+    return parsed;
   } catch (error) {
-    console.error('题库缓存写入失败', error instanceof Error ? error.message : 'unknown');
+    console.error('题库下载失败，改用数据库缓存', error instanceof Error ? error.message : 'unknown');
   }
-  return parsed;
+  const cached = await rows('/lx_config?select=value&key=eq.QUIZ_DATA');
+  if (!cached[0]?.value) throw new Error('题库缓存为空。');
+  return JSON.parse(String(cached[0].value)) as QuizData;
 }
 
 async function quiz(): Promise<QuizData> {
