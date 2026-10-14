@@ -2,6 +2,7 @@
 create table public.lx_codes (
   hash text primary key check (hash ~ '^[a-f0-9]{64}$'),
   label text not null,
+  code text,
   disabled integer not null default 0 check (disabled in (0,1)),
   created bigint not null
 );

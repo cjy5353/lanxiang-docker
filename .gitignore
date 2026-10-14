@@ -4,3 +4,4 @@ dist/
 .env.*
 backups/
 *.dump
+.DS_Store

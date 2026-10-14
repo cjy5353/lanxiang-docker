@@ -20,7 +20,7 @@ export function databaseFetch(pg){
        if(!['lx_codes','lx_sessions'].includes(table))throw new Error('Unknown table');
        if(options.method==='POST'){
          if(table!=='lx_codes'||!Array.isArray(b)||b.length<1||b.length>100)throw new Error('Bad insert');
-         const fields=['hash','label','disabled','created'];
+         const fields=['hash','label','disabled','created','code'];
          const args=[];
          const values=b.map(row=>{
            if(Object.keys(row).some(k=>!fields.includes(k)))throw new Error('Bad field');
@@ -40,7 +40,7 @@ export function databaseFetch(pg){
            rows=(await pg.query('update public.'+table+' set disabled=$'+(i+1)+where+' returning *',args)).rows;
          }else{
            const cols=u.searchParams.get('select')||'*';
-           const valid=table==='lx_codes'?['hash','label','disabled','created']:['id','code_hash','nonce','created','result_id','result'];
+           const valid=table==='lx_codes'?['hash','label','disabled','created','code']:['id','code_hash','nonce','created','result_id','result'];
            if(cols!=='*'&&cols.split(',').some(k=>!valid.includes(k)))throw new Error('Bad select');
            const order=u.searchParams.has('order')?' order by created desc':'';
            const n=Number(u.searchParams.get('limit'));

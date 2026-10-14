@@ -18,7 +18,7 @@ assert.equal((await call('admin/login',{password:'wrong'})).status,401);
 const admin=await call('admin/login',{password:env.ADMIN_SECRET});assert.equal(admin.status,200);
 const adminToken=admin.data.adminToken;
 const generated=await call('admin/generate',{count:3},adminToken);assert.equal(generated.status,200);assert.equal(generated.data.codes.length,3);
-const stored=await pg.query('select * from public.lx_codes');assert(!JSON.stringify(stored).includes(generated.data.codes[0]));
+const stored=await pg.query('select hash,code from public.lx_codes');assert(stored.rows.some(r=>r.code===generated.data.codes[0]),'明文密码应保存在库里，便于店主随时复制');assert.equal((await call('admin/codes',undefined,adminToken)).data.codes.find(c=>c.code===generated.data.codes[0])?.code,generated.data.codes[0],'管理接口应能取回明文密码');
 const code=generated.data.codes[0];
 const unlock=await call('unlock',{code});assert.equal(unlock.status,200);
 const accessToken=unlock.data.accessToken;assert.equal(unlock.data.remaining,3);

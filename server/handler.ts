@@ -118,7 +118,7 @@ export function createHandler(deps:Dependencies){
      if(path.startsWith('admin/')){
        if(!await admin())return json({error:'请先登录管理页。'},401);
        if(path==='admin/codes'&&method==='GET'){
-         const codes=await rest('lx_codes?select=hash,label,disabled,created&order=created.desc&limit=500');
+         const codes=await rest('lx_codes?select=hash,label,disabled,created,code&order=created.desc&limit=500');
          const counts=await rpc('lx_code_usage',{p_hashes:codes.map((c:any)=>c.hash)});
          const used=new Map(counts.map((c:any)=>[c.code_hash,Number(c.used)]));
          return json({codes:codes.map((c:any)=>({...c,used:used.get(c.hash)||0}))});
@@ -129,7 +129,7 @@ export function createHandler(deps:Dependencies){
          const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const codes:string[]=[];const rows=[];
          for(let i=0;i<n;i++){
            const code='LX-'+Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>alphabet[x%32]).join('');
-           codes.push(code);rows.push({hash:await hash(code),label:code.slice(-4),disabled:0,created:Date.now()});
+           codes.push(code);rows.push({hash:await hash(code),label:code.slice(-4),disabled:0,created:Date.now(),code});
          }
          await rest('lx_codes','POST',rows);return json({codes});
        }
